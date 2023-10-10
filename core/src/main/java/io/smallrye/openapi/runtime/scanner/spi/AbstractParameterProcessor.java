@@ -686,7 +686,7 @@ public abstract class AbstractParameterProcessor {
             }
 
             addEncoding(encodings, paramName, paramTarget);
-            setDefaultValue(paramSchema, getDefaultValue(paramTarget));
+            paramSchema = augmentFormParamSchema(paramSchema, paramType, getDefaultValue(paramTarget));
             TypeUtil.mapDeprecated(paramTarget, paramSchema::getDeprecated, paramSchema::setDeprecated);
 
             if (beanValidationScanner.isPresent()) {
@@ -706,6 +706,44 @@ public abstract class AbstractParameterProcessor {
 
             schema.addProperty(paramName, paramSchema);
         }
+    }
+
+    /**
+     * Set default value for @FormParam if any. Updates param's schema either directly or,
+     * when a <code>ref</code> is present, by creating a union of the local and reference schemas
+     * using <code>allOf</code>.
+     *
+     * @param paramSchema the Parameter containing a schema for update
+     * @param paramType Type associated with param
+     */
+    Schema augmentFormParamSchema(Schema paramSchema, Type paramType, Object defaultValue) {
+        String ref = paramSchema.getRef();
+        Schema localSchema;
+
+        if (ref != null) {
+            /*
+             * Lookup the schema `type` from components (if available) or guess the type if
+             * the `ref` is not available.
+             */
+            Schema refSchema = ModelUtil.getComponent(scannerContext.getOpenApi(), ref);
+
+            if (refSchema != null) {
+                localSchema = new SchemaImpl().type(refSchema.getType());
+            } else {
+                localSchema = new SchemaImpl().type(SchemaType
+                        .valueOf(TypeUtil.getTypeAttributes(paramType).get(SchemaConstant.PROP_TYPE).toString().toUpperCase()));
+            }
+        } else {
+            localSchema = paramSchema;
+        }
+
+        int modCount = SchemaImpl.getModCount(localSchema);
+        setDefaultValue(localSchema, defaultValue);
+        if (localOnlySchemaModified(paramSchema, localSchema, modCount)) {
+            // Add new `allOf` schema, erasing `type` derived above from the local schema
+            return new SchemaImpl().addAllOf(paramSchema).addAllOf(localSchema.type(null));
+        }
+        return paramSchema;
     }
 
     /**
