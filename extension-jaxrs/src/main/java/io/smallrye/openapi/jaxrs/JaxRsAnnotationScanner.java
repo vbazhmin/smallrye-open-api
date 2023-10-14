@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
@@ -304,8 +307,7 @@ public class JaxRsAnnotationScanner extends AbstractAnnotationScanner {
         Collection<ClassInfo> exceptionMappers = new ArrayList<>();
 
         for (DotName dn : JaxRsConstants.EXCEPTION_MAPPER) {
-            exceptionMappers.addAll(context.getIndex()
-                    .getKnownDirectImplementors(dn));
+            exceptionMappers.addAll(traverseHierarchy(dn, context));
         }
 
         return exceptionMappers.stream()
@@ -313,16 +315,38 @@ public class JaxRsAnnotationScanner extends AbstractAnnotationScanner {
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 
+    private Collection<ClassInfo> traverseHierarchy(DotName root, AnnotationScannerContext context) {
+        FilteredIndexView index = context.getIndex();
+        Map<DotName, ClassInfo> result = new LinkedHashMap<>();
+
+        Map<DotName, ClassInfo> knownDirectImplementors = index.getKnownDirectImplementors(root)
+                .stream().collect(Collectors.toMap(ClassInfo::name, Function.identity()));
+        result.putAll(knownDirectImplementors);
+        Map<DotName, ClassInfo> knownDirectSubclasses = index.getKnownDirectSubclasses(root)
+                .stream().collect(Collectors.toMap(ClassInfo::name, Function.identity()));
+        result.putAll(knownDirectSubclasses);
+
+        for (DotName implementorName : knownDirectImplementors.keySet()) {
+            Collection<ClassInfo> classInfos = traverseHierarchy(implementorName, context);
+            classInfos.forEach(ci -> result.put(ci.name(), ci));
+        }
+
+        for (DotName subclassName : knownDirectSubclasses.keySet()) {
+            Collection<ClassInfo> classInfos = traverseHierarchy(subclassName, context);
+            classInfos.forEach(ci -> result.put(ci.name(), ci));
+        }
+
+        return result.values();
+    }
+
     private Stream<Entry<DotName, List<AnnotationInstance>>> exceptionResponseAnnotations(ClassInfo classInfo) {
 
-        Type exceptionType = classInfo.interfaceTypes()
-                .stream()
-                .filter(it -> JaxRsConstants.EXCEPTION_MAPPER.contains(it.name()))
-                .filter(it -> Type.Kind.PARAMETERIZED_TYPE.equals(it.kind()))
-                .map(Type::asParameterizedType)
-                .map(type -> type.arguments().get(0))
-                .findAny()
-                .orElse(null);
+        Type exceptionType = classInfo.methods().stream()
+            .filter(m -> m.name().equals(JaxRsConstants.TO_RESPONSE_METHOD_NAME))
+            // Remove bridge method, in our case E extends Throwable for ExceptionMapper
+            .filter(m -> !m.parameterTypes().contains(ClassType.create(Throwable.class.getCanonicalName())))
+            .map(m -> m.parameterType(0))
+            .findAny().orElse(null);
 
         if (exceptionType == null) {
             return Stream.empty();
