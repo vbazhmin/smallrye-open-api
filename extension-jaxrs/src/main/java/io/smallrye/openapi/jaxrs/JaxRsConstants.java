@@ -36,6 +36,9 @@ public class JaxRsConstants {
     static final Set<DotName> EXCEPTION_MAPPER = new TreeSet<>(Arrays.asList(
             DotName.createSimple("javax.ws.rs.ext.ExceptionMapper"),
             DotName.createSimple("jakarta.ws.rs.ext.ExceptionMapper")));
+    static final Set<DotName> PRIORITY = new TreeSet<>(Arrays.asList(
+            DotName.createSimple("javax.annotation.Priority"),
+            DotName.createSimple("jakarta.annotation.Priority")));
     static final Set<DotName> QUERY_PARAM = new TreeSet<>(Arrays.asList(
             DotName.createSimple("javax.ws.rs.QueryParam"),
             DotName.createSimple("jakarta.ws.rs.QueryParam")));
@@ -104,6 +107,7 @@ public class JaxRsConstants {
             .collect(Collectors.toSet());
 
     static final String TO_RESPONSE_METHOD_NAME = "toResponse";
+    static final Integer PRIORITY_DEFAULT_VALUE = 5000;
 
     private static final Set<DotName> methods = new LinkedHashSet<>();
     static {

@@ -31,7 +31,6 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
@@ -307,15 +306,25 @@ public class JaxRsAnnotationScanner extends AbstractAnnotationScanner {
         Collection<ClassInfo> exceptionMappers = new ArrayList<>();
 
         for (DotName dn : JaxRsConstants.EXCEPTION_MAPPER) {
-            exceptionMappers.addAll(traverseHierarchy(dn, context));
+            Collection<ClassInfo> hierarchyChain = obtainHierarchyChain(dn, context);
+            exceptionMappers.addAll(hierarchyChain);
+        }
+        Map<Type, List<ClassInfo>> exceptionAndMappers = groupByExceptionType(exceptionMappers);
+
+        Map<DotName, List<AnnotationInstance>> exceptionWithAnnotations = new LinkedHashMap<>();
+        Comparator<ClassInfo> priorityComparator = JaxRsFactory.createPriorityComparator();
+        for (Type exceptionType : exceptionAndMappers.keySet()) {
+            List<ClassInfo> eMappers = exceptionAndMappers.get(exceptionType);
+
+            eMappers.sort(priorityComparator);
+            List<AnnotationInstance> annotations = exceptionWithAnnotations.computeIfAbsent(exceptionType.name(), (k) -> new ArrayList<>());
+            annotations.addAll(exceptionResponseAnnotations(eMappers.get(0), exceptionType));
         }
 
-        return exceptionMappers.stream()
-                .flatMap(this::exceptionResponseAnnotations)
-                .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        return exceptionWithAnnotations;
     }
 
-    private Collection<ClassInfo> traverseHierarchy(DotName root, AnnotationScannerContext context) {
+    private Collection<ClassInfo> obtainHierarchyChain(DotName root, AnnotationScannerContext context) {
         FilteredIndexView index = context.getIndex();
         Map<DotName, ClassInfo> result = new LinkedHashMap<>();
 
@@ -327,31 +336,40 @@ public class JaxRsAnnotationScanner extends AbstractAnnotationScanner {
         result.putAll(knownDirectSubclasses);
 
         for (DotName implementorName : knownDirectImplementors.keySet()) {
-            Collection<ClassInfo> classInfos = traverseHierarchy(implementorName, context);
+            Collection<ClassInfo> classInfos = obtainHierarchyChain(implementorName, context);
             classInfos.forEach(ci -> result.put(ci.name(), ci));
         }
 
         for (DotName subclassName : knownDirectSubclasses.keySet()) {
-            Collection<ClassInfo> classInfos = traverseHierarchy(subclassName, context);
+            Collection<ClassInfo> classInfos = obtainHierarchyChain(subclassName, context);
             classInfos.forEach(ci -> result.put(ci.name(), ci));
         }
 
         return result.values();
     }
 
-    private Stream<Entry<DotName, List<AnnotationInstance>>> exceptionResponseAnnotations(ClassInfo classInfo) {
+    private Map<Type, List<ClassInfo>> groupByExceptionType(Collection<ClassInfo> exceptionMappers) {
+        LinkedHashMap<Type, List<ClassInfo>> result = new LinkedHashMap<>();
+        for (ClassInfo exceptionMapper : exceptionMappers) {
+            Type exceptionType = exceptionMapper.methods().stream()
+                .filter(m -> m.name().equals(JaxRsConstants.TO_RESPONSE_METHOD_NAME))
+                // Remove bridge methods, 0x00001000 is ACC_SYNTHETIC mask
+                .filter(m -> (m.flags() & 0x00001000) == 0)
+                // extract exception type, it is the only argument in contract
+                .map(m -> m.parameterType(0))
+                .findAny().orElse(null);
 
-        Type exceptionType = classInfo.methods().stream()
-            .filter(m -> m.name().equals(JaxRsConstants.TO_RESPONSE_METHOD_NAME))
-            // Remove bridge method, in our case E extends Throwable for ExceptionMapper
-            .filter(m -> !m.parameterTypes().contains(ClassType.create(Throwable.class.getCanonicalName())))
-            .map(m -> m.parameterType(0))
-            .findAny().orElse(null);
+            if (exceptionType == null) {
+                continue;
+            }
 
-        if (exceptionType == null) {
-            return Stream.empty();
+            List<ClassInfo> classInfos = result.computeIfAbsent(exceptionType, (k) -> new ArrayList<>());
+            classInfos.add(exceptionMapper);
         }
+        return result;
+    }
 
+    private List<AnnotationInstance> exceptionResponseAnnotations(ClassInfo classInfo, Type exceptionType) {
         Stream<AnnotationInstance> methodAnnotations = Stream
                 .of(classInfo.method(JaxRsConstants.TO_RESPONSE_METHOD_NAME, exceptionType))
                 .filter(Objects::nonNull)
@@ -360,16 +378,9 @@ public class JaxRsAnnotationScanner extends AbstractAnnotationScanner {
         Stream<AnnotationInstance> classAnnotations = ResponseReader.getResponseAnnotations(classInfo).stream();
 
         // Later annotations will eventually override earlier ones, so put class before method
-        List<AnnotationInstance> annotations = Stream
-                .concat(classAnnotations, methodAnnotations)
+        return Stream.concat(classAnnotations, methodAnnotations)
                 .filter(ResponseReader::hasResponseCodeValue)
                 .collect(Collectors.toList());
-
-        if (annotations.isEmpty()) {
-            return Stream.empty();
-        } else {
-            return Stream.of(entryOf(exceptionType.name(), annotations));
-        }
     }
 
     // Replace with Map.entry when available (Java 9+)
