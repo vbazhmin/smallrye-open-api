@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>smallrye-open-api-parent</artifactId>
-    <version>3.6.1-SNAPSHOT</version>
+    <version>3.6.1-VB-SNAPSHOT</version>
 
     <packaging>pom</packaging>
     <name>SmallRye: OpenAPI Parent</name>
@@ -50,13 +50,13 @@
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/smallrye/smallrye-open-api/issues</url>
+        <url>https://github.com/vbazhmin/smallrye-open-api/issues</url>
     </issueManagement>
 
     <scm>
-        <connection>scm:git:git@github.com:smallrye/smallrye-open-api.git</connection>
-        <developerConnection>scm:git:git@github.com:smallrye/smallrye-open-api.git</developerConnection>
-        <url>https://github.com/smallrye/smallrye-open-api/</url>
+        <connection>scm:git:git@github.com:vbazhmin/smallrye-open-api.git</connection>
+        <developerConnection>scm:git:git@github.com:vbazhmin/smallrye-open-api.git</developerConnection>
+        <url>https://github.com/vbazhmin/smallrye-open-api/</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -71,17 +71,25 @@
         <module>tools</module>
     </modules>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>hh-snapshots</id>
+            <url>https://m2.hh.ru/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <repositories>
         <repository>
-            <id>ossrh</id>
-            <name>Sonatype OSSRH Snapshots</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <id>hh-snapshots</id>
+            <name>hh public snapshots repository</name>
+            <url>https://m2.hh.ru/content/repositories/snapshots</url>
             <releases>
-               <enabled>false</enabled>
+                <enabled>false</enabled>
+                <checksumPolicy>fail</checksumPolicy>
             </releases>
             <snapshots>
-              <enabled>true</enabled>
-           </snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -344,6 +352,16 @@
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <nexusUrl>https://m2.hh.ru/</nexusUrl>
+                        <serverId>hh</serverId>
+                        <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    </configuration>
+                </plugin>
+                <!--<plugin>
                     <groupId>org.asciidoctor</groupId>
                     <artifactId>asciidoctor-maven-plugin</artifactId>
                     <configuration>
@@ -360,7 +378,7 @@
                             <organization>${project.organization.name}</organization>
                         </attributes>
                     </configuration>
-                </plugin>
+                </plugin>-->
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>build-helper-maven-plugin</artifactId>
