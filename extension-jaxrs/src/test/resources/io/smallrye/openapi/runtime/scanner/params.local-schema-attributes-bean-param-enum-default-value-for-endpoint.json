@@ -1,0 +1,47 @@
+{
+  "openapi": "3.0.3",
+  "paths": {
+    "/bean-param-enum-default-value-for-endpoint": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "petEnum": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PetEnum"
+                      },
+                      {
+                        "default": "LIZARD"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PetEnum": {
+        "enum": [
+          "LIZARD",
+          "DOG",
+          "CAT"
+        ],
+        "type": "string"
+      }
+    }
+  }
+}
