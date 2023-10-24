@@ -1,0 +1,38 @@
+{
+  "openapi": "3.0.3",
+  "paths": {
+    "/resources": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Priority 1 Internal Server Error"
+          }
+        }
+      }
+    }
+  }
+}

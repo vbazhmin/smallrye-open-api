@@ -9,6 +9,8 @@ import org.json.JSONException;
 import org.junit.jupiter.api.Test;
 import test.io.smallrye.openapi.runtime.scanner.jakarta.ChildExceptionMapper;
 import test.io.smallrye.openapi.runtime.scanner.jakarta.ParentExceptionMapper;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.PriorityOneExceptionMapper;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.PriorityTwoExceptionMapper;
 
 class ExceptionMapperScanTests extends IndexScannerTestBase {
 
@@ -69,6 +71,15 @@ class ExceptionMapperScanTests extends IndexScannerTestBase {
             test.io.smallrye.openapi.runtime.scanner.jakarta.TestResource.class,
             ParentExceptionMapper.class,
             ChildExceptionMapper.class
+        );
+    }
+
+    @Test
+    void testJakartaPriorityOverrideExceptionMapper() throws IOException, JSONException {
+        test("responses.exception-mapper-priority-overridden.json",
+            test.io.smallrye.openapi.runtime.scanner.jakarta.TestResource.class,
+            PriorityOneExceptionMapper.class,
+            PriorityTwoExceptionMapper.class
         );
     }
 }
