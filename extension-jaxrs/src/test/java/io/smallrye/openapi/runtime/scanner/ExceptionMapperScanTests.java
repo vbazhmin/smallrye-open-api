@@ -7,6 +7,8 @@ import org.eclipse.microprofile.openapi.models.OpenAPI;
 import org.jboss.jandex.Index;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.ChildExceptionMapper;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.ParentExceptionMapper;
 
 class ExceptionMapperScanTests extends IndexScannerTestBase {
 
@@ -59,5 +61,14 @@ class ExceptionMapperScanTests extends IndexScannerTestBase {
         test("responses.exception-mapper-multiple-response-generation.json",
                 test.io.smallrye.openapi.runtime.scanner.jakarta.TestResource.class,
                 test.io.smallrye.openapi.runtime.scanner.jakarta.ExceptionHandler3.class);
+    }
+
+    @Test
+    void testJakartaChildExceptionMapperOverridesParentExceptionMapper() throws IOException, JSONException {
+        test("responses.exception-mapper-parent-overridden-by-exception-mapper-child.json",
+            test.io.smallrye.openapi.runtime.scanner.jakarta.TestResource.class,
+            ParentExceptionMapper.class,
+            ChildExceptionMapper.class
+        );
     }
 }
