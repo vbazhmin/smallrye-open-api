@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import io.smallrye.openapi.api.OpenApiConfig;
 import test.io.smallrye.openapi.runtime.scanner.Widget;
 import test.io.smallrye.openapi.runtime.scanner.jakarta.BeanParamEnumDefaultValueForEndpointResource;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.BeanParamJerseyResource;
 import test.io.smallrye.openapi.runtime.scanner.jakarta.MultipleContentTypesWithFormParamsTestResource;
 import test.io.smallrye.openapi.runtime.scanner.jakarta.PetEnum;
 
@@ -457,6 +458,13 @@ class ParameterScanTests extends IndexScannerTestBase {
         test("params.local-schema-attributes.json",
                 test.io.smallrye.openapi.runtime.scanner.jakarta.DefaultEnumTestResource.class,
                 test.io.smallrye.openapi.runtime.scanner.jakarta.DefaultEnumTestResource.MyEnum.class);
+    }
+
+    @Test
+    void testJakartaBeanParamJersey() throws IOException, JSONException {
+        test("params.local-schema-attributes-bean-param-jersey.json",
+            BeanParamJerseyResource.class,
+            BeanParamJerseyResource.JerseyBean.class);
     }
 
     @Test

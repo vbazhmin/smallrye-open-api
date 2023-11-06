@@ -1,0 +1,39 @@
+{
+  "openapi": "3.0.3",
+  "paths": {
+    "/bean-param-jersey": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "primitiveString": {
+                    "type": "string"
+                  },
+                  "primitiveInteger": {
+                    "format": "int32",
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -8,6 +8,11 @@ import org.eclipse.microprofile.openapi.models.OpenAPI;
 import org.jboss.jandex.Index;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.JerseyFileDataBodyPart;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.JerseyFormDataBodyPart;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.JerseyFormDataContentDisposition;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.JerseyFormDataMultipart;
+import test.io.smallrye.openapi.runtime.scanner.jakarta.JerseyStreamDataBodyPart;
 
 class RequestBodyScanTests extends IndexScannerTestBase {
 
@@ -103,5 +108,40 @@ class RequestBodyScanTests extends IndexScannerTestBase {
             }
         }
         test("params.request-body-constraints.json", Resource.class);
+    }
+
+    @Test
+    void testJakartaJerseyFormDataMultiPart() throws IOException, JSONException {
+        test("params.jersey-form-data-multipart.json",
+            JerseyFormDataMultipart.class
+        );
+    }
+
+    @Test
+    void testJakartaJerseyFormDataBodyPart() throws IOException, JSONException {
+        test("params.jersey-form-data-body-part.json",
+            JerseyFormDataBodyPart.class
+        );
+    }
+
+    @Test
+    void testJakartaJerseyFileDataBodyPart() throws IOException, JSONException {
+        test("params.jersey-file-data-body-part.json",
+            JerseyFileDataBodyPart.class
+        );
+    }
+
+    @Test
+    void testJakartaJerseyStreamDataBodyPart() throws IOException, JSONException {
+        test("params.jersey-stream-data-body-part.json",
+            JerseyStreamDataBodyPart.class
+        );
+    }
+
+    @Test
+    void testJakartaJerseyFormDataContentDisposition() throws IOException, JSONException {
+        test("params.jersey-form-data-content-disposition.json",
+            JerseyFormDataContentDisposition.class
+        );
     }
 }
