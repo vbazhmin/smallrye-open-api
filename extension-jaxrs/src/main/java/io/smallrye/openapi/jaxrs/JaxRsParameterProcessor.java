@@ -1,13 +1,23 @@
 package io.smallrye.openapi.jaxrs;
 
+import io.smallrye.openapi.api.models.media.EncodingImpl;
+import io.smallrye.openapi.runtime.io.parameter.ParameterConstant;
+import io.smallrye.openapi.runtime.scanner.AnnotationScannerExtension;
+import io.smallrye.openapi.runtime.scanner.ResourceParameters;
+import io.smallrye.openapi.runtime.scanner.dataobject.TypeResolver;
+import io.smallrye.openapi.runtime.scanner.spi.AbstractParameterProcessor;
+import io.smallrye.openapi.runtime.scanner.spi.AnnotationScannerContext;
+import io.smallrye.openapi.runtime.scanner.spi.FrameworkParameter;
+import io.smallrye.openapi.runtime.util.Annotations;
+import io.smallrye.openapi.runtime.util.TypeUtil;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
 import org.eclipse.microprofile.openapi.models.media.Encoding;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter;
 import org.eclipse.microprofile.openapi.models.parameters.Parameter.In;
@@ -19,17 +29,6 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 import org.jboss.jandex.Type;
-
-import io.smallrye.openapi.api.models.media.EncodingImpl;
-import io.smallrye.openapi.runtime.io.parameter.ParameterConstant;
-import io.smallrye.openapi.runtime.scanner.AnnotationScannerExtension;
-import io.smallrye.openapi.runtime.scanner.ResourceParameters;
-import io.smallrye.openapi.runtime.scanner.dataobject.TypeResolver;
-import io.smallrye.openapi.runtime.scanner.spi.AbstractParameterProcessor;
-import io.smallrye.openapi.runtime.scanner.spi.AnnotationScannerContext;
-import io.smallrye.openapi.runtime.scanner.spi.FrameworkParameter;
-import io.smallrye.openapi.runtime.util.Annotations;
-import io.smallrye.openapi.runtime.util.TypeUtil;
 
 /**
  * Note, javax.ws.rs.PathParam PathParam targets of javax.ws.rs.core.PathSegment PathSegment are not currently supported.
@@ -169,10 +168,46 @@ public class JaxRsParameterProcessor extends AbstractParameterProcessor {
         } else {
             FrameworkParameter frameworkParam = JaxRsParameter.forName(name);
 
-            if (frameworkParam != null) {
+            if (frameworkParam == null) {
+                return;
+            }
+
+            boolean isJerseyParameter = frameworkParam.getNames().stream().anyMatch(JaxRsParameter::isJerseyParameter);
+            if (isJerseyParameter) {
+                readJerseyParameter(annotation, frameworkParam, overriddenParametersOnly);
+            } else {
                 readJaxRsParameter(annotation, frameworkParam, beanParamAnnotation, overriddenParametersOnly);
             }
         }
+    }
+
+    private void readJerseyParameter(AnnotationInstance annotation, FrameworkParameter frameworkParam, boolean overriddenParametersOnly) {
+        AnnotationTarget target = annotation.target();
+        Type targetType = getType(target);
+
+        if (frameworkParam.style == Style.FORM) {
+            String paramName = paramName(annotation);
+            if (isJerseyMultipart(targetType) && formParams.containsKey(paramName)) {
+                return;
+            }
+            // Store the @FormDataParam for later processing
+            formParams.put(paramName, annotation);
+            readFrameworkParameter(annotation, frameworkParam, overriddenParametersOnly);
+        }
+    }
+
+    private boolean isJerseyMultipart(Type type) {
+        Set<DotName> names = new HashSet<>();
+
+        if (type.kind() == Type.Kind.CLASS) {
+            names.add(type.asClassType().name());
+        } else if (type.kind() == Type.Kind.ARRAY) {
+            names.add(type.asArrayType().elementType().name());
+        } else if (type.kind() == Type.Kind.PARAMETERIZED_TYPE) {
+            type.asParameterizedType().arguments().stream().map(Type::name).forEach(names::add);
+        }
+
+        return names.stream().anyMatch(JerseyConstants.MULTIPART_INPUTS::contains);
     }
 
     private void readJaxRsParameter(AnnotationInstance annotation,

@@ -24,6 +24,9 @@ public enum JaxRsParameter {
     COOKIE_PARAM(JaxRsConstants.COOKIE_PARAM, Parameter.In.COOKIE, null, Parameter.Style.FORM),
     BEAN_PARAM(JaxRsConstants.BEAN_PARAM, null, null, null),
 
+    // Support Jersey annotations directly
+    JERSEY_MULTIPART_FORM(JerseyConstants.FORM_DATA_PARAM, null, Parameter.Style.FORM, Parameter.Style.FORM),
+
     // Support RESTEasy annotations directly
     RESTEASY_PATH_PARAM(RestEasyConstants.PATH_PARAM, Parameter.In.PATH, null, Parameter.Style.SIMPLE),
     // Apply to the last-matched @Path of the structure injecting the MatrixParam
@@ -78,6 +81,10 @@ public enum JaxRsParameter {
 
     public static boolean isParameter(DotName annotationName) {
         return forName(annotationName) != null;
+    }
+
+    public static boolean isJerseyParameter(DotName annotationName) {
+        return annotationName.toString().startsWith(JerseyConstants.JERSEY_PACKAGE);
     }
 
 }

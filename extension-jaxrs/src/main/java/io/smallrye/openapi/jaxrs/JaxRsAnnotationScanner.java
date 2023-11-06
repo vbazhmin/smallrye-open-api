@@ -106,7 +106,8 @@ public class JaxRsAnnotationScanner extends AbstractAnnotationScanner {
 
     @Override
     public boolean isMultipartInput(Type inputType) {
-        return RestEasyConstants.MULTIPART_INPUTS.contains(inputType.name());
+        DotName name = inputType.name();
+        return JerseyConstants.MULTIPART_INPUTS.contains(name) || RestEasyConstants.MULTIPART_INPUTS.contains(name);
     }
 
     @Override
